@@ -5,7 +5,9 @@ offsetCurve::offsetCurve(){
 
 void offsetCurve::init(string imagePath){
     inputImagePath = imagePath;
-    inputImage.load(imagePath);
+    //inputImage.load(imagePath);
+    inputImage.load("/Users/hollt054/Desktop/Videos_backup/processed/20190119SMWaves_IMG_3586_.0001.png");
+    std::cout << " tired to load it";
     inputImage.getTexture().setTextureMinMagFilter(GL_NEAREST, GL_NEAREST);
 
     // create session file path
@@ -125,6 +127,15 @@ void offsetCurve::deleteSelectedP(){
     dstPoints.erase(dstPoints.begin()+(selectedP-1));
 }
 
+void offsetCurve::shiftCurve(int value){
+    for(int i = 0; i < srcPoints.size(); i++){
+        //srcPoints[i].y += value;
+        dstPoints[i].y += value;
+    }
+    updatePathFromPoints();
+    createOffsets();
+}
+
 string offsetCurve::getInputImagePath(){
     return inputImagePath;
 }
@@ -198,6 +209,7 @@ void offsetCurve::readSession(string filePath){
         settings.pushTag("image");
         inputImagePath = settings.getValue("path", "foo");
         inputImage.load(inputImagePath);
+        std::cout << " I think it loaded " << inputImagePath;
         inputImage.getTexture().setTextureMinMagFilter(GL_NEAREST, GL_NEAREST);
         settings.popTag();
         srcPoints.clear();
@@ -339,14 +351,17 @@ void ofApp::setup(){
     paramsFile.add(_new.setup("new (n)"));
     paramsFile.add(_open.setup("open (o)"));
     paramsFile.add(_save.setup("save (s)"));
-    
+    paramsFile.add(_imageSave.setup("save image (j)"));
+
     paramsEdit.setName("edit");
     _move.setName("move canvas (m)");
+    _offset.setName("offset curve (f)");
     _edit.setName("edit point (e)");
     _insert.setName("insert point (i)");
     _remove.setName("remove point (r)");
     _move.set(1);
     paramsEdit.add(_move);
+    paramsEdit.add(_offset);
     paramsEdit.add(_edit);
     paramsEdit.add(_insert);
     paramsEdit.add(_remove);
@@ -361,6 +376,7 @@ void ofApp::setup(){
     _new.addListener(this, &ofApp::newClicked);
     _open.addListener(this, &ofApp::openClicked);
     _save.addListener(this, &ofApp::saveClicked);
+    _imageSave.addListener(this, &ofApp::imageSaveClicked);
     ofAddListener(paramsEdit.parameterChangedE(), this, &ofApp::paramModeChangedEvent);
 }
 
@@ -369,18 +385,22 @@ void ofApp::paramModeChangedEvent(ofAbstractParameter &e){
     string name = e.getName();
     
     _move.disableEvents();
+    _offset.disableEvents();
     _edit.disableEvents();
     _insert.disableEvents();
     _remove.disableEvents();
     _move.set((name.compare(0,4,"move",0,4)== 0));
+    _offset.set((name.compare(0,6,"offset",0,6)== 0));
     _edit.set((name.compare(0,4,"edit",0,4)== 0));
     _insert.set((name.compare(0,6,"insert",0,6)== 0));
     _remove.set((name.compare(0,6,"remove",0,6)== 0));
     if(name.compare(0,4,"move",0,4)== 0)mode=MOVE;
+    if(name.compare(0,6,"offset",0,6)== 0)mode=OFFSET;
     if(name.compare(0,4,"edit",0,4)== 0)mode=EDIT;
     if(name.compare(0,6,"insert",0,6)== 0)mode=INSERT;
     if(name.compare(0,6,"remove",0,6)== 0)mode=REMOVE;
     _move.enableEvents();
+    _offset.enableEvents();
     _edit.enableEvents();
     _insert.enableEvents();
     _remove.enableEvents();
@@ -398,6 +418,11 @@ void ofApp::openClicked(){
 void ofApp::saveClicked(){
     session.saveSession();
 }
+
+void ofApp::imageSaveClicked(){
+    saveBgFbo();
+}
+
 
 //--------------------------------------------------------------
 void ofApp::update(){
@@ -417,6 +442,9 @@ void ofApp::update(){
     switch (mode){
         case MOVE:
             myCanvas.enableMouseInput(true);
+            break;
+        case OFFSET:
+            myCanvas.enableMouseInput(false);
             break;
         case EDIT:
             myCanvas.enableMouseInput(false);
@@ -518,8 +546,6 @@ void ofApp::newSessionRequester(){
     loadImageAndBuildScanlines();
 }
 
-
-
 void ofApp::saveBgFbo(){
     std::cout << "------------ Saving image --\n"<< session.outputImagePath << "\n";
 
@@ -554,6 +580,13 @@ void ofApp::applyOffset(){
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
+    myCanvas.begin();
+    switch(key){
+        case OF_KEY_SHIFT:
+            _SHIFT = true;
+            break;
+    }
+    myCanvas.end();
 }
 
 //--------------------------------------------------------------
@@ -586,7 +619,8 @@ void ofApp::keyReleased(int key){
             break;
         case ',':
             switch (mode){
-                case MOVE: mode=EDIT;_edit.set(1);break;
+                case MOVE: mode=OFFSET;_offset.set(1);break;
+                case OFFSET: mode=EDIT;_edit.set(1);break;
                 case EDIT: mode=INSERT;_insert.set(1);break;
                 case INSERT: mode=REMOVE;_remove.set(1);break;
                 case REMOVE: mode=MOVE;_move.set(1);break;
@@ -594,6 +628,9 @@ void ofApp::keyReleased(int key){
             break;
         case 'm':
             mode=MOVE;_move.set(1);
+            break;
+        case 'f':
+            mode=OFFSET;_offset.set(1);
             break;
         case 'e':
             mode=EDIT;_edit.set(1);
@@ -625,9 +662,35 @@ void ofApp::keyReleased(int key){
         case 'j':
             saveBgFbo();
             break;
+        case OF_KEY_DOWN:
+            processArrowKey('d');
+            break;
+        case OF_KEY_UP:
+            processArrowKey('u');
+            break;
+        case OF_KEY_SHIFT:
+            _SHIFT = false;
+            break;
     }
     myCanvas.end();
     
+}
+
+void ofApp::processArrowKey(char c){
+    float m = 1;
+    if(_SHIFT){
+        m = 100;
+        std::cout << "move by 10\n";
+    }else{
+        std::cout << "move by 1\n";
+    }
+    if(c == 'd'){
+        m *= -1;
+        std::cout << "move down\n";
+    }else if (c == 'u'){
+        std::cout << "move up\n";
+    }
+    session.shiftCurve(m);
 }
 
 //--------------------------------------------------------------

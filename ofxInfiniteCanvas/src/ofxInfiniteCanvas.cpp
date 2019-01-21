@@ -35,7 +35,6 @@ ofMatrix4x4 ofxInfiniteCanvas::BoM = ofMatrix4x4( 1, 0, 0, 0,
                                                  0, 0, 0, 1 );
 
 static const float minDifference = 0.1e-5f;
-
 static const unsigned long doubleclickTime = 300;
 
 //----------------------------------------
@@ -74,17 +73,12 @@ ofxInfiniteCanvas::ofxInfiniteCanvas(){
     lookAt.setName("Look At");
     protectedParameters.add(lookAt);
     protectedParameters.add(parameters);
-    cam.enableOrtho();
-    bUseOfCam = true;
-    
-}
-//----------------------------------------
-void ofxInfiniteCanvas::toggleOfCam(){
-    bUseOfCam ^= true;
 }
 //----------------------------------------
 void ofxInfiniteCanvas::save(string path){
     ofXml xml;
+    //xml.serialize(protectedParameters);
+    //cout << "params at save: " << ofToString(protectedParameters) << endl;
     xml.save(path);
 }
 //----------------------------------------
@@ -94,7 +88,9 @@ bool ofxInfiniteCanvas::load(string path){
         reset();
         ofXml xml;
         xml.load(path);
+        //xml.deserialize(protectedParameters);
         setLookAt(getLookAt());
+        //cout << "params loaded: " << ofToString(protectedParameters) << endl;
         return true;
     }
     return false;
@@ -113,38 +109,29 @@ void ofxInfiniteCanvas::setOverrideMouse(bool b){
 //----------------------------------------
 void ofxInfiniteCanvas::reset(){
     if (!viewport.isEmpty()) {
-        translation = viewport.getCenter();
-        //        translation = {viewport.width/2, viewport.height/2, 0.};
+        translation = ofVec3f(viewport.width/2, viewport.height/2);
     }else{
-        translation = {(ofGetWidth()/2.), (ofGetHeight()/2.), 0};
+        translation = ofVec3f(ofGetWidth()/2, ofGetHeight()/2);
     }
-    offset = {0,0,0};
     scale =1;
-    move = {0,0,0};
+    move = ofVec3f::zero();
     bDoScale = false;
     bApplyInertia = false;
     bDoTranslate = false;
 }
 //----------------------------------------
 void ofxInfiniteCanvas::begin(ofRectangle _viewport){
-    glm::vec3 t = glm::vec3(glm::vec4(translation.get() + offset,1.0) * orientationMatrix);
     viewport = _viewport;
-    if(!bUseOfCam){
-        ofPushView();
-        ofViewport(viewport);
-        ofSetupScreenOrtho(viewport.width, viewport.height, nearClip, farClip);
-        ofPushMatrix();
-        ofRotateXDeg(orientation.x);
-        ofRotateYDeg(orientation.y);
-        
-        ofTranslate(t);
-        ofScale(scale,scale * (bFlipY?-1:1),scale);
-    }else{
-//        cam.setOrientation(orientation);
-        cam.setPosition(t.x * -1.0f, t.y * (bFlipY?-1:1), t.z * -1);
-        cam.setScale(scale,scale * (bFlipY?-1:1),scale);
-        cam.begin();
-    }
+    ofPushView();
+    ofViewport(viewport);
+    ofSetupScreenOrtho(viewport.width, viewport.height, nearClip, farClip);
+    ofPushMatrix();
+    ofRotateX(orientation.x);
+    ofRotateY(orientation.y);
+    
+    ofTranslate(translation*orientationMatrix);
+    ofScale(scale,scale * (bFlipY?-1:1),scale);
+    
 }
 //----------------------------------------
 ofxInfiniteCanvas::LookAt ofxInfiniteCanvas::getLookAt(){
@@ -152,12 +139,8 @@ ofxInfiniteCanvas::LookAt ofxInfiniteCanvas::getLookAt(){
 }
 //----------------------------------------
 void ofxInfiniteCanvas::end(){
-    if(bUseOfCam){
-        cam.end();
-    }else{
-        ofPopMatrix();
-        ofPopView();
-    }
+    ofPopMatrix();
+    ofPopView();
 }
 //----------------------------------------
 void ofxInfiniteCanvas::setFarClip(float fc){
@@ -181,27 +164,27 @@ void ofxInfiniteCanvas::setLookAt(LookAt l){
     switch (l) {
         case OFX2DCAM_FRONT:
             orientationMatrix = FM;
-            orientation={0,0,0};//.set(0);
+            orientation.set(0);
             break;
         case OFX2DCAM_BACK:
             orientationMatrix = BM;
-            orientation = {0,180,0};//.set(0,180,0);
+            orientation.set(0,180,0);
             break;
         case OFX2DCAM_LEFT:
             orientationMatrix = LM;
-            orientation = {0, 90,0};//.set(0, 90,0);
+            orientation.set(0, 90,0);
             break;
         case OFX2DCAM_RIGHT:
             orientationMatrix = RM;
-            orientation = {0, -90, 0};//.set(0, -90, 0);
+            orientation.set(0, -90, 0);
             break;
         case OFX2DCAM_TOP:
             orientationMatrix = TM;
-            orientation = {-90, 0,0};//.set(-90, 0,0);
+            orientation.set(-90, 0,0);
             break;
         case OFX2DCAM_BOTTOM:
             orientationMatrix = BoM;
-            orientation = {90, 0, 0};//.set(90, 0, 0);
+            orientation.set(90, 0, 0);
             break;
         default:
             break;
@@ -216,20 +199,12 @@ void ofxInfiniteCanvas::setDrag(float drag){this->drag = drag;}
 //----------------------------------------
 float ofxInfiniteCanvas::getDrag() const{return drag;}
 //----------------------------------------
-void ofxInfiniteCanvas::setTranslation(glm::vec3 t){
+void ofxInfiniteCanvas::setTranslation(ofVec3f t){
     translation = t;
 }
 //----------------------------------------
 void ofxInfiniteCanvas::setScale(float s){
     scale = s;
-}
-//----------------------------------------
-void ofxInfiniteCanvas::setOffset(const glm::vec3& o){
-    offset = o;
-}
-//----------------------------------------
-glm::vec3 ofxInfiniteCanvas::getOffset(){
-    return offset;
 }
 //----------------------------------------
 void ofxInfiniteCanvas::enableMouseInputCB(bool &e){
@@ -252,6 +227,7 @@ void ofxInfiniteCanvas::enableMouseInput(bool e){
         }
     }
 }
+
 //----------------------------------------
 void ofxInfiniteCanvas::enableMouseListeners(bool e){
     if (bMouseListenersEnabled != e) {
@@ -269,6 +245,7 @@ void ofxInfiniteCanvas::enableMouseListeners(bool e){
         bMouseListenersEnabled = e;
     }
 }
+
 //----------------------------------------
 void ofxInfiniteCanvas::disableMouseInput(){
     enableMouseInput(false);
@@ -278,23 +255,23 @@ bool ofxInfiniteCanvas::getMouseInputEnabled(){
     return bMouseInputEnabled;
 }
 //----------------------------------------
+//bool
 void ofxInfiniteCanvas::mousePressed(ofMouseEventArgs & mouse){
-    
     if(viewport.inside(mouse.x, mouse.y)){
         if (bMouseInputEnabled) {
             prevMouse = mouse;
             bDoTranslate =(mouse.button == OF_MOUSE_BUTTON_LEFT);
             bDoScale =(mouse.button == OF_MOUSE_BUTTON_RIGHT);
             bApplyInertia = false;
-            clicPoint = mouse - translation.get() - viewport.getPosition();
+            clicPoint = mouse - translation.get() - ofVec3f(viewport.x, viewport.y);
             clicPoint /= scale;
             
             //clicPoint = screenToWorld(mouse);
-            clicTranslation = translation.get();
+            clicTranslation = translation;
             clicScale = scale;
         }
         if (bMouseOverride) {
-            // mouse.set(screenToWorld((glm::vec3)mouse));//convertir a glm
+            //mouse.set(screenToWorld((ofVec3f)mouse));
             //            lastMousePressed = mouse;
             //            bNotifyMousePressed = true;
         }
@@ -319,7 +296,7 @@ void ofxInfiniteCanvas::mouseReleased(ofMouseEventArgs & mouse){
             prevMouse = mouse;
         }
         if (bMouseOverride) {
-            //mouse.set(screenToWorld((glm::vec3)mouse));//convertir a glm
+            //mouse.set(screenToWorld((ofVec3f)mouse));
             //        lastMouseReleased = mouse;
             //        bNotifyMouseReleased = true;
         }
@@ -338,7 +315,7 @@ void ofxInfiniteCanvas::mouseDragged(ofMouseEventArgs & mouse){
             prevMouse = mouse;
         }
         if (bMouseOverride) {
-            //        mouse.set(screenToWorld((glm::vec3)mouse));//convertir a glm
+            //mouse.set(screenToWorld((ofVec3f)mouse));
             //        lastMouseDragged = mouse;
             //        bNotifyMouseDragged = true;
         }
@@ -350,18 +327,18 @@ void ofxInfiniteCanvas::mouseDragged(ofMouseEventArgs & mouse){
 //bool
 void ofxInfiniteCanvas::mouseScrolled(ofMouseEventArgs & mouse){
     if(viewport.inside(mouse.x, mouse.y)){
-        if (bMouseInputEnabled) {
+        if (bMouseInputEnabled){
             move.z = scrollSensitivity * mouse.scrollY / ofGetHeight();
             bDoTranslate = false;
             bDoScale = true;
-            clicPoint = glm::vec2(ofGetMouseX(), ofGetMouseY()) - translation.get()- viewport.getPosition();
+            clicPoint = ofVec2f(ofGetMouseX(), ofGetMouseY()) - translation.get() - ofVec3f(viewport.x, viewport.y);
             clicPoint /= scale;
             
             clicScale = scale;
-            clicTranslation = translation.get();
+            clicTranslation = translation;
         }
         if (bMouseOverride) {
-            //        mouse.set(screenToWorld((glm::vec3)mouse));//convertir a glm
+            //mouse.set(screenToWorld((ofVec3f)mouse));
             //        lastMouseScrolled = mouse;
             //        bNotifyMouseScrolled = true;
         }
@@ -371,7 +348,7 @@ void ofxInfiniteCanvas::mouseScrolled(ofMouseEventArgs & mouse){
 }
 //----------------------------------------
 void ofxInfiniteCanvas::updateMouse(){
-    move = {0,0,0};
+    move = ofVec3f::zero();
     if(bDoScale){
         move.z = dragSensitivity * mouseVel.y /ofGetHeight();
     }else if(bDoTranslate){
@@ -395,32 +372,32 @@ void ofxInfiniteCanvas::update(){
             }
         }
         if(bDoTranslate){
-            translation += glm::vec3(move.x , move.y, 0);
+            translation += ofVec3f(move.x , move.y, 0);
         }else if(bDoScale){
             scale += move.z + move.z*scale;
             translation = clicTranslation - clicPoint*(scale - clicScale);
         }
         if(!bApplyInertia){
-            move = {0,0,0};
+            move = ofVec3f::zero();
         }
         //        if (bMouseOverride) {
         //            if (bNotifyMousePressed) {
-        //                lastMousePressed.set(screenToWorld((glm::vec3)lastMousePressed));
+        //                lastMousePressed.set(screenToWorld((ofVec3f)lastMousePressed));
         //                ofNotifyEvent(ofEvents().mousePressed, lastMousePressed);
         //                bNotifyMousePressed = false;
         //            }
         //            if (bNotifyMouseReleased) {
-        //                lastMouseReleased.set(screenToWorld((glm::vec3)lastMouseReleased));
+        //                lastMouseReleased.set(screenToWorld((ofVec3f)lastMouseReleased));
         //                ofNotifyEvent(ofEvents().mouseReleased, lastMouseReleased);
         //                bNotifyMouseReleased = false;
         //            }
         //            if (bNotifyMouseDragged) {
-        //                lastMouseDragged.set(screenToWorld((glm::vec3)lastMouseDragged));
+        //                lastMouseDragged.set(screenToWorld((ofVec3f)lastMouseDragged));
         //                ofNotifyEvent(ofEvents().mouseDragged, lastMouseDragged);
         //                bNotifyMouseDragged = false;
         //            }
         //            if (bNotifyMouseScrolled) {
-        //                lastMouseScrolled.set(screenToWorld((glm::vec3)lastMouseScrolled));
+        //                lastMouseScrolled.set(screenToWorld((ofVec3f)lastMouseScrolled));
         //                ofNotifyEvent(ofEvents().mouseScrolled, lastMouseScrolled);
         //                bNotifyMouseScrolled = false;
         //            }
@@ -435,18 +412,17 @@ void ofxInfiniteCanvas::drawDebug(){
     ofDrawBitmapString(m, 0, 20);
 }
 //----------------------------------------
-glm::vec3 ofxInfiniteCanvas::screenToWorld(glm::vec3 screen){
-    glm::vec3 s = screen - translation.get() - offset - viewport.getPosition();
-    s = glm::vec3(glm::vec4(s,1.) * orientationMatrix);
+ofVec3f ofxInfiniteCanvas::screenToWorld(ofVec3f screen){
+    ofVec3f s = screen - translation - ofVec3f(viewport.x, viewport.y);
+    s = s*orientationMatrix;
     s /= scale;
     if(bFlipY)s.y*=-1;
     return s;
 }
 
-glm::vec3 ofxInfiniteCanvas::worldToScreen(glm::vec3 world){
-    glm::vec3 s = world * scale.get();
-    s = glm::vec3(glm::vec4(s,1.) *  glm::inverse(orientationMatrix));
-    //	s = s * orientationMatrix.getInverse();
-    s = s + translation.get() + offset + viewport.getPosition();
+ofVec3f ofxInfiniteCanvas::worldToScreen(ofVec3f world){
+    ofVec3f s = world * scale;
+    s = s * orientationMatrix.getInverse();
+    s = s + translation + ofVec3f(viewport.x, viewport.y);
     return s;
 }

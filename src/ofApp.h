@@ -4,7 +4,6 @@
 #include "ofxInfiniteCanvas.h"
 #include "ofxGui.h"
 #include "ofxXmlSettings.h"
-//#include "ofxXml.h"
 
 class offsetCurve{
 public:
@@ -33,6 +32,7 @@ public:
     void moveSelectedP(ofPoint p);
     void insertP(ofPoint p);
     void deleteSelectedP();
+    void shiftCurve(int i);
     
     void draw();
 
@@ -110,9 +110,11 @@ public:
     ofxButton _new;
     ofxButton _open;
     ofxButton _save;
-    
+    ofxButton _imageSave;
+
     ofParameterGroup paramsEdit;
     ofParameter <bool> _move;
+    ofParameter <bool> _offset;
     ofParameter <bool> _edit;
     ofParameter <bool> _insert;
     ofParameter <bool> _remove;
@@ -126,8 +128,12 @@ public:
     void newClicked();
     void openClicked();
     void saveClicked();
-    
-    enum appMode{MOVE=0, EDIT=1, INSERT=2, REMOVE=3};
+    void imageSaveClicked();
+
+    bool _SHIFT = false;
+    void processArrowKey(char c);
+
+    enum appMode{MOVE=0, OFFSET= 1, EDIT=2, INSERT=3, REMOVE=4};
     appMode mode;
     
 };
