@@ -1,0 +1,14 @@
+I keep forgetting this and having to relearn it everytime I dive back in so I'll document it so I can easily refresh my memory.
+
+IN BROWSER
+-1- In a browser, log into github, create a repository
+-2- DO NOT click on "Initialize this repository with a README"
+
+IN XCODE
+-3- Under Source Control menu, select "Create Git Repositories..." (this will be local)
+-4- Under Source Control menu, select "Commit"
+-4- Go to the Source Control Navigator
+-5- Right click on Remotes
+-6- Add Existing Remote, if none exist, Add Remote
+-7- Give it a name, put in the github address to the web repository
+-8- Under Source Control menu, select "Push". Your changes will now be uploaded.

@@ -5,9 +5,7 @@ offsetCurve::offsetCurve(){
 
 void offsetCurve::init(string imagePath){
     inputImagePath = imagePath;
-    //inputImage.load(imagePath);
-    inputImage.load("/Users/hollt054/Desktop/Videos_backup/processed/20190119SMWaves_IMG_3586_.0001.png");
-    std::cout << " tired to load it";
+    inputImage.load(imagePath);
     inputImage.getTexture().setTextureMinMagFilter(GL_NEAREST, GL_NEAREST);
 
     // create session file path
