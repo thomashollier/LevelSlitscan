@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ofMain.h"
+// I tried to use a newer version of infinitecanvas but it was not working
+// so I went back into the old version and edited a few things.
 #include "ofxInfiniteCanvas.h"
 #include "ofxGui.h"
 #include "ofxXmlSettings.h"
