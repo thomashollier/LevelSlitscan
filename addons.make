@@ -1,0 +1,4 @@
+ofxGui
+ofxInfiniteCanvas
+ofxPoco
+ofxXmlSettings
